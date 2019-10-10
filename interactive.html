@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+	<style>
+        #header {
+            padding-top: 2px;
+            padding-bottom: 10px;
+            font-size: larger;
+            font-weight: bold;
+            text-align: center;
+            font-family: Georgia;
+        }
+        div {
+            text-align: center;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            display: none;
+            stroke: rgb(81, 0, 231);
+            shape-rendering: crispEdges;
+        }
+        .axis text {
+            font-family: Georgia;
+            fill: rgb(0, 0, 0);
+            font-size: 16px;
+        }
+        .axis2 path,
+        .axis2 line {
+            fill: none;
+            stroke: rgb(15, 15, 15);
+            stroke-width: 2;
+            shape-rendering:crispEdges;
+        }
+        .axis2 text {
+            font-family: Georgia;
+            fill: rgb(80, 79, 79);
+            font-size: 8px;
+            font-weight: lighter;
+        }
+        .overlay{
+            fill: none;
+            pointer-events:all;
+        }
+        text {
+            fill: rgb(250, 248, 248);
+            font-family: Georgia;
+            font-size: 14px;
+        }
+        .label {
+            fill: Gray;
+            font-family: Georgia;
+            font-size: 14px;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: rgb(15, 15, 15);
+            stroke-width: 1.5px;
+        }
+        .toolTip {
+            position: absolute;
+            display: none;
+            min-width: 80px;
+            height: auto;
+            background: none repeat scroll 0 0 #ffffff;
+            border: 1px solid #6F257F;
+            padding: 14px;
+            text-align: center;
+        }
+    </style>	
+</head>
+
+<svg width = "960", height = "500"></svg>
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<body>
+
+<div id = "svg"></div>
+<div id = "dropdown"><header id = "header">Charts of Rural Populations in Various Countries</header>
+</div>
+<script>
+var svg = d3.select("svg");
+margin = {top: 20, right : 20, bottom: 20, left: 80},
+    width = +svg.attr("width") -margin.left - margin.right,
+    height = +svg.attr("height") -margin.top - margin.bottom;
+var g = svg.append("g")
+    .attr("transform", "translate(" +margin.left+"," +margin.top+ ")");
+
+var tooltip = d3.select("body").append("div").attr("class", "toolTip")
+var data = [{country: 'Bangladesh', population_2012: 105905297, growth: {year_2013:42488 , year_2014:934 , year_2015:52633 , year_2016:112822 , year_2017:160792}},
+            {country: 'Ethopia', population_2012: 75656319, growth: {year_2013:1606010 , year_2014:1606705 , year_2015:1600666 , year_2016:1590077 , year_2017:1580805}},
+            {country: 'Kenya', population_2012: 33007327, growth: {year_2013:705153 , year_2014:703994 , year_2015:699906 , year_2016:694295 , year_2017:687910}},
+            {country: 'Afghanistan', population_2012: 23280573, growth: {year_2013:717151 , year_2014:706082 , year_2015:665025 , year_2016:616262 , year_2017:573643}},
+            {country: 'Morocco', population_2012: 13619520, growth: {year_2013:11862 , year_2014:7997 , year_2015:391 , year_2016:-8820 , year_2017:-17029}}
+        ];
+
+cumdata = data.map(function(d){
+    var sum = d.population_2012  + d.growth.year_2013 + d.growth.year_2014 + d.growth.year_2015 + d.growth.year_2016 + d.growth.year_2017;
+    var pop_change = 	[   d.growth.year_2013/ d.population_2012 * 100, 
+							d.growth.year_2014/(d.population_2012  + d.growth.year_2013)*100  , 
+							d.growth.year_2015/(d.population_2012  + d.growth.year_2013 +  d.growth.year_2014)*100, 
+							d.growth.year_2016/(d.population_2012  + d.growth.year_2013 +  d.growth.year_2014 +d.growth.year_2015)*100,
+							d.growth.year_2017/(d.population_2012  + d.growth.year_2013 + d.growth.year_2014 + d.growth.year_2015 + d.growth.year_2016)*100
+						];                       
+    return { country: d.country, value: d3.zip([2013, 2014, 2015, 2016, 2017], pop_change), popsum: sum }	  
+    //return { country: d.country, $2013:2013,$2014: 2014, $2015: 2015,$2016: 2016,$2017: 2017, pop_change), popsum: sum }	  
+});
+
+cumdata.sort(function(x,y){
+    return x.popsum-y.popsum;
+})
+sortdata = cumdata;
+console.log(cumdata);
+//Domains and Ranges
+var xBarScale = d3.scaleLinear().range([0, width]);
+var yBarScale = d3.scaleBand().range([height, 0]);
+xBarScale.domain([0, d3.max(sortdata, function(d){ return (d.popsum);})]);
+yBarScale.domain(sortdata.map(function(d){ return d.country;})).padding(0.1);
+
+yBarAxis = d3.axisLeft(yBarScale)
+svg.append("g")
+    .attr("class", "axis")
+    .attr("transform", "translate(100, 0)")
+    .call(yBarAxis);
+
+//<Code is good
+var bars = svg.selectAll(".bar")
+    .data(cumdata)
+    .enter()
+    .append("g")
+    .attr("class", "bar")    
+    .attr("transform", function(d) {         
+     return "translate(100, " + (yBarScale.range() * 0.2 + yBarScale(d.country)) + ")";});
+//>   
+//>Code is good        
+bars.append("rect")    
+    .attr("height", yBarScale.bandwidth())
+    .attr("y", function(d,i) {return yBarScale(d.country); })
+    .attr("width", function(d){return xBarScale(d.popsum)})
+    .attr("x", 100)
+    .style("fill", "Grey")
+    .on("mouseover", 
+    function(d){
+    //Good   
+        d3.select(this).style("fill", "Blue");      
+    //>
+        //<Good
+        
+        var lChart = svg.append("svg")
+                        .attr("class", "lChart")
+                        .attr("width", width)
+                        .attr("height", height)
+                        .append("g")
+                        .attr("transform", "translate(" + ((350+width)/2) + "," + (height*0.5) + ")");
+
+        //Extract x and y values
+        const arrayColumn = (arr,n) => arr.map(x => x[n]);
+        xvalues = arrayColumn(d.value, 0);
+        yvalues = arrayColumn(d.value, 1); 
+               
+        //Line Chart Domain and Ranges
+        var x = d3.scaleLinear().range([0,150]);
+        xLineScale = d3.scaleLinear().range([0,150]);
+        xLineScale.domain([2013,2017]);
+        var xLineAxis = d3.axisBottom().scale(xLineScale).ticks(4)        
+        var y = d3.scaleLinear().range([120, 0]);
+        yLineScale = d3.scaleLinear().range([120, 0]);
+        yLineScale.domain(d3.min(yvalues),d3.max(yvalues));
+        
+        var yLineAxis = d3.axisLeft().scale(yLineScale).ticks(8)
+        console.log(d3.min(yvalues))
+        console.log(d3.max(yvalues))
+        //console.log("x value being passed", xvalues);
+        console.log("y value being passed", yvalues)
+        lchartdata = d3.zip(xvalues, yvalues)
+        //<Axes Good        
+        var valueline = d3.line()
+            .x(function(d,i) {return xLineScale(i)})
+            .y(function(d,i) {return yLineScale(i);});        
+        console.log("d values being passed to path append", lchartdata);
+        
+        lChart.append("path")
+            .data([lchartdata])
+            .attr("class", "line")
+            .attr("d", valueline)
+            .attr("stroke", "grey")
+            .attr("stroke-width", 1.5);
+            //
+        lChart.selectAll("dot")
+            .data(lchartdata)
+            .enter().append("circle")
+            .attr("r", 2)
+            .attr("cx", function(d){return x(xvalues)})
+            .attr("cy", function(d){return y(yvalues)});
+        lChart.append("g")
+            .attr("class", "axis2")
+            .attr("transform", "translate(0, 120)")
+            .call(xLineAxis);
+        lChart.append("g")
+            .attr("class", "axis2")
+            .call(d3.axisLeft(y));
+        lChart.append("text").attr("class", "label").attr("x", 160).attr("y", 150).attr("text-anchor", "end").text("Year");
+		lChart.append("text").attr("class", "label").attr("x", -20).attr("y", 5).attr("text-anchor", "end").text("Pct %");
+        //>
+
+        /*tooltip
+            .style("left", d3.event.pageX - 50 + "px")
+            .style("top", d3.event.pageY - 70 + "px")
+            .style("display", "inline-block")
+            .html((d.country) + "<br>" + (d.popsum));*/        
+    })
+    //ADD THIS BACK TO YoUr COOOOODE
+        //.on("mouseout", function(d){ 
+        //    d3.selectAll(".lChart").remove();
+        //    d3.select(this).style("fill", "Grey")
+        //    tooltip.style("display", "none");});
+//ADD THIS BACK______________]
+//*Code is good
+bars.append("text")
+        .attr("x", 110)
+        .attr("y", function(d) { return yBarScale(d.country)+30; })
+        .attr("dy", "1em")
+        .text(function(d){return Math.round(d.popsum).toLocaleString();})
+
+</script>
+</body>
